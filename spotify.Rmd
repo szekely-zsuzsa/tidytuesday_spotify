@@ -183,18 +183,15 @@ popularity_1 <- lm(track_popularity ~ playlist_genre,
                    data = spotify)
 
 summary(popularity_1)
-
-# Genre seems to be a significant predictor of popularity, however, according to the adjuster R-squared value, this model explains only 3% of the variance of our data.
 ```
+
+Genre seems to be a significant predictor of popularity, however, according to the adjuster R-squared value, this model explains only 3% of the variance of our data.
 
 ## Model for popularity predicted by danceability
 ```{r}
 # Checking dancebility scores (all scores should be on a 0-1 scale)
 spotify %>%
   count(danceability) # %>% View()
-
-# Checking energy scores
-# Checking track duration variable
 ```
 
 ```{r}
@@ -202,16 +199,16 @@ popularity_2 <- lm(track_popularity ~ playlist_genre + danceability + energy + d
                        data = spotify)
 
 summary(popularity_2)
-
-# Genre, danceability, energy, and the duration of the tracks are significant predictors of popularity. Including more variables in the model led to an increased adjusted R-squared value of 5.8%, thus greater explained variance.
 ```
+
+Genre, danceability, energy, and the duration of the tracks are significant predictors of popularity. Including more variables in the model led to an increased adjusted R-squared value of 5.8%, thus greater explained variance.
 
 ```{r}
 # Plotting Cook's distance for the model, observing the 5 most influential outliers (Cook's distance > 0.5)
 plot(popularity_2, which = 4, id.n = 5)
-
-# No influential outliers found
 ```
+
+No influential outliers found
 
 ## Assumption check
 Normality assumption check
@@ -231,9 +228,9 @@ qqline(spotify$energy)
 
 qqnorm(spotify$duration_ms)
 qqline(spotify$duration_ms)
-
-# Based on the Q-Q plot, the normality assumption is slightly violated. Checking the normality of danceability, energy, and duration predictors, we can see that the two latter are not normally distributed, so we might consider transforming these data.
 ```
+
+Based on the Q-Q plot, the normality assumption is slightly violated. Checking the normality of danceability, energy, and duration predictors, we can see that the two latter are not normally distributed, so we might consider transforming these data.
 
 Linearity assumption check
 ```{r}
@@ -243,9 +240,9 @@ plot(x = popularity_2, which = 1)
 Homoscedasticty assumption check
 ```{r}
 bptest(popularity_2)
-
-# Based on the test, the homoscedasticity assumption is violated
 ```
+
+Based on the test, the homoscedasticity assumption is violated
 
 Multicollinearity assumption check
 ```{r}
@@ -281,9 +278,9 @@ residuals_sqrt <- residuals(popularity_sqrt)
 # Q-Q plot
 qqnorm(residuals_sqrt)
 qqline(residuals_sqrt)
-
-# Based on the Q-Q plot, the normality assumption is slightly violated
 ```
+
+Based on the Q-Q plot, the normality assumption is slightly violated
 
 Linearity assumption check
 ```{r}
@@ -293,9 +290,9 @@ plot(x = popularity_sqrt, which = 1)
 Homoscedasticty assumption cherck
 ```{r}
 bptest(popularity_sqrt)
-
-# Based on the test, the homoscedasticity assumption is still violated
 ```
+
+Based on the test, the homoscedasticity assumption is still violated
 
 Multicollinearity assumption check
 ```{r}
@@ -331,9 +328,9 @@ residuals_log <- residuals(popularity_log)
 # Q-Q plot
 qqnorm(residuals_log)
 qqline(residuals_log)
-
-# Based on the Q-Q plot, the normality assumption is slightly violated
 ```
+
+Based on the Q-Q plot, the normality assumption is slightly violated
 
 Linearity assumption check
 ```{r}
@@ -345,9 +342,9 @@ plot(x = popularity_log, which = 1)
 Homoscedasticty assumption cherck
 ```{r}
 bptest(popularity_log)
-
-# Based on the test, the homoscedasticity assumption is still violated
 ```
+
+Based on the test, the homoscedasticity assumption is still violated
 
 Multicollinearity assumption check
 ```{r}
@@ -378,6 +375,9 @@ cat(paste("Adjusted R2:", simple_adj_r2, "\n"))
 cat(paste("F-statistic:", simple_f, "\n"))
 cat(paste("Degrees of freedom (DF):", simple_f_df1, ",", simple_f_df2, "\n"))
 cat(paste("P-value:", simple_p, "\n"))
+
+# Coefficients information
+tab_model(popularity_1)
 ```
 
 Model test statistics for the complex model
@@ -420,9 +420,9 @@ cat(paste("p-value:", compare_p, "\n"))
 glance(popularity_1) %>%
   rbind(glance(popularity_2)) %>%
   as.data.frame()
-
-# The two models differ significantly, and as the AIC of the complex model (302531.2) is lower than the AIC of the simpler model (303497.7), the complex model is considered better.
 ```
+
+The two models differ significantly, and as the AIC of the complex model (302531.2) is lower than the AIC of the simpler model (303497.7), the complex model is considered better.
 
 # Discussion
 
