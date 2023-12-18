@@ -1,0 +1,407 @@
+---
+title: "tidy_tuesday_spotify"
+author: "Zsuzsa Szekely"
+date: "2023-12-15"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(tidytuesdayR)
+library(lmtest)
+library(car)
+library(broom)
+library(sjPlot)
+```
+
+Import data
+```{r}
+# Load data
+tt_data <- tt_load("2020-01-21")
+spotify <- tt_data$spotify_songs
+```
+
+# Exploring the data
+```{r}
+# Genres
+spotify %>% 
+  count(playlist_genre)
+
+## Unifying release date formats
+spotify <- spotify %>% 
+  mutate(track_album_release_date = substr(track_album_release_date, 1, 4))
+
+## Plotting popularity per genres along the years
+spotify %>% 
+  ggplot(aes(x = track_album_release_date, y = track_popularity)) +
+  geom_point() +
+  facet_wrap(~ playlist_genre) +
+  scale_x_discrete(breaks = seq(1960, 2020, by = 10))
+
+# Popularity
+## Exploring popularity
+spotify %>% 
+  group_by(playlist_genre) %>% 
+  mutate(popularity_genre_mean = mean(track_popularity)) %>% 
+  select(playlist_genre, popularity_genre_mean) %>% 
+  distinct()
+
+## Plotting popularity per genres
+spotify %>% 
+  ggplot(aes(x = track_popularity)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+## Looking at track with popularity score of 0
+spotify %>% 
+  filter(track_popularity == 0) # %>% View()
+
+## Plotting popularity after excluding tracks with popularity score of 0
+spotify %>% 
+  filter(track_popularity != 0) %>% 
+  ggplot(aes(x = track_popularity)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+# Danceability
+## Plotting the danceability scores of the tracks: aggregated and per each genre
+spotify %>% 
+  ggplot(aes(x = danceability)) +
+  geom_histogram()
+
+spotify %>% 
+  ggplot(aes(x = danceability)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+## Plotting the danceability and popularity of the tracks: aggregated and per genres
+spotify %>% 
+  filter(track_popularity != 0) %>%
+  ggplot(aes(x = danceability, y = track_popularity)) +
+  geom_point()
+
+spotify %>% 
+  filter(track_popularity != 0) %>%
+  ggplot(aes(x = danceability, y = track_popularity)) +
+  geom_point() +
+  facet_wrap(~ playlist_genre)
+
+# Energy
+## Plotting energy scores per genres
+spotify %>% 
+  ggplot(aes(x = energy)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+## Plotting energy and popularity per genres
+spotify %>% 
+  filter(track_popularity != 0) %>%
+  ggplot(aes(x = energy, y = track_popularity)) +
+  geom_point() +
+  facet_wrap(~ playlist_genre)
+
+# Speechiness
+## Plotting speechiness scores per genres
+spotify %>% 
+  ggplot(aes(x = speechiness)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+## Plotting speechiness and popularity per genres
+spotify %>% 
+  filter(track_popularity != 0) %>%
+  ggplot(aes(x = speechiness, y = track_popularity)) +
+  geom_point() +
+  facet_wrap(~ playlist_genre)
+
+# Valence
+## Plotting valence scores per genres
+spotify %>% 
+  ggplot(aes(x = valence)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+## Plotting valence and popularity per genres
+spotify %>% 
+  filter(track_popularity != 0) %>%
+  ggplot(aes(x = valence, y = track_popularity)) +
+  geom_point() +
+  facet_wrap(~ playlist_genre)
+
+# Duration
+## Plotting valence scores per genres
+spotify %>% 
+  ggplot(aes(x = duration_ms)) +
+  geom_histogram() +
+  facet_wrap(~ playlist_genre)
+
+## Plotting duration and popularity per genres
+spotify %>% 
+  filter(track_popularity != 0) %>%
+  ggplot(aes(x = duration_ms, y = track_popularity)) +
+  geom_point() +
+  facet_wrap(~ playlist_genre)
+```
+
+# Models
+
+## Model for popularity predicted by genres
+```{r}
+popularity_1 <- lm(track_popularity ~ playlist_genre,
+                   data = spotify)
+
+summary(popularity_1)
+
+# Genre seems to be a significant predictor of popularity, however, according to the adjuster R-squared value, this model explains only 3% of the variance of our data.
+```
+
+## Model for popularity predicted by danceability
+```{r}
+# Checking dancebility scores (all scores should be on a 0-1 scale)
+spotify %>%
+  count(danceability) # %>% View()
+
+# Checking energy scores
+# Checking track duration variable
+```
+
+```{r}
+popularity_2 <- lm(track_popularity ~ playlist_genre + danceability + energy + duration_ms,
+                       data = spotify)
+
+summary(popularity_2)
+
+# Genre, danceability, energy, and the duration of the tracks are significant predictors of popularity. Including more variables in the model led to an increased adjusted R-squared value of 5.8%, thus greater explained variance.
+```
+
+```{r}
+# Plotting Cook's distance for the model, observing the 5 most influential outliers (Cook's distance > 0.5)
+plot(popularity_2, which = 4, id.n = 5)
+
+# No influential outliers found
+```
+
+## Assumption check
+Normality assumption check
+```{r}
+# Residuals
+residuals <- residuals(popularity_2)
+
+# Q-Q plot
+qqnorm(residuals)
+qqline(residuals)
+
+qqnorm(spotify$danceability)
+qqline(spotify$danceability)
+
+qqnorm(spotify$energy)
+qqline(spotify$energy)
+
+qqnorm(spotify$duration_ms)
+qqline(spotify$duration_ms)
+
+# Based on the Q-Q plot, the normality assumption is slightly violated. Checking the normality of danceability, energy, and duration predictors, we can see that the two latter are not normally distributed, so we might consider transforming these data.
+```
+
+Linearity assumption check
+```{r}
+plot(x = popularity_2, which = 1)
+```
+
+Homoscedasticty assumption check
+```{r}
+bptest(popularity_2)
+
+residuals <- residuals(popularity_2)
+fitted_values <- fitted(popularity_2)
+
+# Create a scatterplot of residuals vs. fitted values
+plot(fitted_values, residuals, xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red", lty = 2)  # Add a horizontal line at y = 0 for reference
+
+# Based on the test, the homoscedasticity assumption is violated
+```
+
+Multicollinearity assumption check
+```{r}
+vif_values <- vif(popularity_2)
+
+print(vif_values)
+```
+
+Given that both the normality and the homoscedasticity assumptions are violated, we need to apply some transformation to our data. Based on the normality check of our predictors, I will transform the energy and the duration data.u
+
+# SQUARE ROOT TRANSFORMATION
+
+```{r}
+spotify <- spotify %>% 
+  mutate(energy_sqrt = sqrt(energy)) %>% 
+  mutate(duration_sqrt = sqrt(duration_ms))
+```
+
+Building the new model with square-root transformed data
+```{r}
+popularity_sqrt <- lm(track_popularity ~ playlist_genre + danceability + energy_sqrt + duration_sqrt,
+                       data = spotify)
+
+summary(popularity_sqrt)
+```
+
+## Assumption check round 2
+Normality assumption check
+```{r}
+# Residuals
+residuals_sqrt <- residuals(popularity_sqrt)
+
+# Q-Q plot
+qqnorm(residuals_sqrt)
+qqline(residuals_sqrt)
+
+# Based on the Q-Q plot, the normality assumption is slightly violated
+```
+
+Linearity assumption check
+```{r}
+plot(x = popularity_sqrt, which = 1)
+```
+
+Homoscedasticty assumption cherck
+```{r}
+bptest(popularity_sqrt)
+
+# Based on the test, the homoscedasticity assumption is still violated
+```
+
+Multicollinearity assumption check
+```{r}
+vif_values_sqrt <- vif(popularity_sqrt)
+
+print(vif_values_sqrt)
+```
+
+# LOGARITHMIC TRANSFORMATION
+
+Given that both the normality and the homoscedasticity assumptions are still violated after the square root transformation, I'll try logarithmic transformation.
+
+```{r}
+spotify <- spotify %>% 
+  mutate(energy_log = log(energy)) %>% 
+  mutate(duration_log = log(duration_ms))
+```
+
+Building the new model with logarithmic transformed data
+```{r}
+popularity_log <- lm(track_popularity ~ playlist_genre + danceability + energy_log + duration_log,
+                       data = spotify)
+
+summary(popularity_sqrt)
+```
+
+## Assumption check round 3
+Normality assumption check
+```{r}
+# Residuals
+residuals_log <- residuals(popularity_log)
+
+# Q-Q plot
+qqnorm(residuals_log)
+qqline(residuals_log)
+
+# Based on the Q-Q plot, the normality assumption is slightly violated
+```
+
+Linearity assumption check
+```{r}
+plot(x = popularity_log, which = 1)
+
+# Linearity got worse after the log transformation
+```
+
+Homoscedasticty assumption cherck
+```{r}
+bptest(popularity_log)
+
+# Based on the test, the homoscedasticity assumption is still violated
+```
+
+Multicollinearity assumption check
+```{r}
+vif_values_log <- vif(popularity_log)
+
+print(vif_values_log)
+```
+
+Some assumptions of our models are violated, even after square root or logarithmic data transformation. Due to this, for the comparison of the simple and the more complex model, I will use the original complex model that contains non-transformed data. However, we need to take the assumption violations into consideration when interpreting the results.
+
+# Model comparison
+
+Model test statistics for the simple model
+```{r}
+summary(popularity_1)
+augment(popularity_1)
+
+# Get model test statistics
+simple_model_summary <- summary(popularity_1)
+simple_adj_r2 <- simple_model_summary$adj.r.squared
+simple_f <- simple_model_summary$fstatistic[1]
+simple_f_df1 <- simple_model_summary$fstatistic[2]
+simple_f_df2 <- simple_model_summary$fstatistic[3]
+simple_p <- pf(simple_f, simple_f_df1, simple_f_df2, lower.tail = FALSE)
+
+# Display model test statistics
+cat(paste("Adjusted R2:", simple_adj_r2, "\n"))
+cat(paste("F-statistic:", simple_f, "\n"))
+cat(paste("Degrees of freedom (DF):", simple_f_df1, ",", simple_f_df2, "\n"))
+cat(paste("P-value:", simple_p, "\n"))
+```
+
+Model test statistics for the complex model
+```{r}
+summary(popularity_2)
+augment(popularity_2)
+
+# Get model test statistics
+complex_model_summary <- summary(popularity_2)
+complex_adj_r2 <- complex_model_summary$adj.r.squared
+complex_f <- complex_model_summary$fstatistic[1]
+complex_f_df1 <- complex_model_summary$fstatistic[2]
+complex_f_df2 <- complex_model_summary$fstatistic[3]
+complex_p <- pf(complex_f, complex_f_df1, complex_f_df2, lower.tail = FALSE)
+
+# Display model test statistics
+cat(paste("Adjusted R2:", complex_adj_r2, "\n"))
+cat(paste("F-statistic:", complex_f, "\n"))
+cat(paste("Degrees of freedom (DF):", complex_f_df1, ",", complex_f_df2, "\n"))
+cat(paste("P-value:", complex_p, "\n"))
+
+# Coefficients information
+tab_model(popularity_2)
+```
+
+Comparison
+```{r}
+# Comparing the two models
+compare <- anova(popularity_1, popularity_2)
+
+# Extracting F and p values
+compare_f <- compare$F[2]
+compare_p <- compare$Pr[2]
+
+# Displaying F and p values
+cat(paste("F-test statistic:", compare_f, "\n"))
+cat(paste("p-value:", compare_p, "\n"))
+
+# Looking at the two models and their AIC values
+glance(popularity_1) %>%
+  rbind(glance(popularity_2)) %>%
+  as.data.frame()
+
+# The two models differ significantly, and as the AIC of the complex model (302531.2) is lower than the AIC of the simpler model (303497.7), the complex model is considered better.
+```
+
+# Discussion
+
+In this analysis, I have observed some parameters of Spotify tracks, such as their genre, danceability, energy, speechiness, valence, and duration. I was interested in how these variables are related to the popularity of the tracks. I have built models to see how these variables can predict popularity. One of my models contained only the genre of the music, while in a more complex model, danceability, energy, and duration predictors were also included. Based on the comparison of the two models, the more complex one seemed to be significantly better than the simple one. However, there are a few things that are important to notice. First, the normality and the homoscedasticity assumptions of the complex model were not met, even after the transformation (square root, logarithmic) of the data. Second, the explanatory power of these models are quite low, the simple model explains only 3% of the variance, and for the complex model, this value is around 6%. This suggests that these models are fairly poor at predicting popularity.
