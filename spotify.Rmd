@@ -38,7 +38,9 @@ spotify %>%
   ggplot(aes(x = track_album_release_date, y = track_popularity)) +
   geom_point() +
   facet_wrap(~ playlist_genre) +
-  scale_x_discrete(breaks = seq(1960, 2020, by = 10))
+  scale_x_discrete(breaks = seq(1960, 2020, by = 10)) +
+  xlab("Release date") +
+  ylab("Popularity")
 
 # Popularity
 ## Exploring popularity
@@ -52,7 +54,9 @@ spotify %>%
 spotify %>% 
   ggplot(aes(x = track_popularity)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Popularity") +
+  ylab("Number of tracks")
 
 ## Looking at track with popularity score of 0
 spotify %>% 
@@ -63,86 +67,112 @@ spotify %>%
   filter(track_popularity != 0) %>% 
   ggplot(aes(x = track_popularity)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Popularity") +
+  ylab("Number of tracks")
 
 # Danceability
 ## Plotting the danceability scores of the tracks: aggregated and per each genre
 spotify %>% 
   ggplot(aes(x = danceability)) +
-  geom_histogram()
+  geom_histogram() +
+  xlab("Popularity") +
+  ylab("Number of tracks")
 
 spotify %>% 
   ggplot(aes(x = danceability)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Danceability") +
+  ylab("Number of tracks")
 
 ## Plotting the danceability and popularity of the tracks: aggregated and per genres
 spotify %>% 
   filter(track_popularity != 0) %>%
   ggplot(aes(x = danceability, y = track_popularity)) +
-  geom_point()
+  geom_point() +
+  xlab("Danceability") +
+  ylab("Popularity")
 
 spotify %>% 
   filter(track_popularity != 0) %>%
   ggplot(aes(x = danceability, y = track_popularity)) +
   geom_point() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Danceability") +
+  ylab("Popularity")
 
 # Energy
 ## Plotting energy scores per genres
 spotify %>% 
   ggplot(aes(x = energy)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Energy") +
+  ylab("Number of tracks")
 
 ## Plotting energy and popularity per genres
 spotify %>% 
   filter(track_popularity != 0) %>%
   ggplot(aes(x = energy, y = track_popularity)) +
   geom_point() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Energy") +
+  ylab("Popularity")
 
 # Speechiness
 ## Plotting speechiness scores per genres
 spotify %>% 
   ggplot(aes(x = speechiness)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Speechiness") +
+  ylab("Number of tracks")
 
 ## Plotting speechiness and popularity per genres
 spotify %>% 
   filter(track_popularity != 0) %>%
   ggplot(aes(x = speechiness, y = track_popularity)) +
   geom_point() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Speechiness") +
+  ylab("Popularity")
 
 # Valence
 ## Plotting valence scores per genres
 spotify %>% 
   ggplot(aes(x = valence)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Valence") +
+  ylab("Number of tracks")
 
 ## Plotting valence and popularity per genres
 spotify %>% 
   filter(track_popularity != 0) %>%
   ggplot(aes(x = valence, y = track_popularity)) +
   geom_point() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Valence") +
+  ylab("Popularity")
 
 # Duration
 ## Plotting valence scores per genres
 spotify %>% 
   ggplot(aes(x = duration_ms)) +
   geom_histogram() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Duration") +
+  ylab("Number of tracks")
 
 ## Plotting duration and popularity per genres
 spotify %>% 
   filter(track_popularity != 0) %>%
   ggplot(aes(x = duration_ms, y = track_popularity)) +
   geom_point() +
-  facet_wrap(~ playlist_genre)
+  facet_wrap(~ playlist_genre) +
+  xlab("Duration") +
+  ylab("Popularity")
 ```
 
 # Models
@@ -214,14 +244,6 @@ Homoscedasticty assumption check
 ```{r}
 bptest(popularity_2)
 
-residuals <- residuals(popularity_2)
-fitted_values <- fitted(popularity_2)
-
-# Create a scatterplot of residuals vs. fitted values
-plot(fitted_values, residuals, xlab = "Fitted Values", ylab = "Residuals",
-     main = "Residuals vs. Fitted Values")
-abline(h = 0, col = "red", lty = 2)  # Add a horizontal line at y = 0 for reference
-
 # Based on the test, the homoscedasticity assumption is violated
 ```
 
@@ -234,7 +256,7 @@ print(vif_values)
 
 Given that both the normality and the homoscedasticity assumptions are violated, we need to apply some transformation to our data. Based on the normality check of our predictors, I will transform the energy and the duration data.u
 
-# SQUARE ROOT TRANSFORMATION
+# Model with square root transformed data
 
 ```{r}
 spotify <- spotify %>% 
@@ -282,7 +304,7 @@ vif_values_sqrt <- vif(popularity_sqrt)
 print(vif_values_sqrt)
 ```
 
-# LOGARITHMIC TRANSFORMATION
+# Model with logarithmically transformed data
 
 Given that both the normality and the homoscedasticity assumptions are still violated after the square root transformation, I'll try logarithmic transformation.
 
